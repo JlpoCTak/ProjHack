@@ -1,7 +1,6 @@
 """
-trainer.py
-Скрипт для обучения модели категорий транзакций на основе ci_data.csv.
-Результат: category_model.joblib
+trainer_with_metrics.py
+Версия trainer.py с добавлением метрик + Gradient Boosting.
 """
 
 import pandas as pd
@@ -11,8 +10,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.model_selection import train_test_split
 
 INPUT_CSV = "ci_data.csv"
 MODEL_PATH = "category_model.joblib"
@@ -21,7 +21,6 @@ MODEL_PATH = "category_model.joblib"
 def prepare_df(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
-    # Числовые признаки
     for col in ["Withdrawal", "Deposit", "Balance"]:
         df[col] = (
             df[col]
@@ -33,17 +32,14 @@ def prepare_df(df: pd.DataFrame) -> pd.DataFrame:
             .fillna(0.0)
         )
 
-    # Доп. признак amount
     df["Amount"] = df["Deposit"] - df["Withdrawal"]
 
-    # Даты
     date_col = "Date.1" if "Date.1" in df.columns else "Date"
     df["DateParsed"] = pd.to_datetime(df[date_col], errors="coerce", dayfirst=True)
     df["Day"] = df["DateParsed"].dt.day.fillna(0).astype(int)
     df["Month"] = df["DateParsed"].dt.month.fillna(0).astype(int)
     df["Year"] = df["DateParsed"].dt.year.fillna(0).astype(int)
 
-    # Текстовый признак (RefNo как источник магазина)
     df["RefText"] = df["RefNo"].astype(str).fillna("")
 
     return df
@@ -52,10 +48,8 @@ def prepare_df(df: pd.DataFrame) -> pd.DataFrame:
 def train():
     print("Загрузка данных:", INPUT_CSV)
     df = pd.read_csv(INPUT_CSV)
-
     df = prepare_df(df)
 
-    # Берём строки, где категория указана
     df_train = df[df["Category"].notnull() & (df["Category"].astype(str).str.strip() != "")]
     if df_train.empty:
         raise ValueError("В CSV нет строк с Category — модель обучить невозможно.")
@@ -65,13 +59,10 @@ def train():
     X = df_train[["RefText", "Withdrawal", "Deposit", "Balance", "Amount", "Month", "Day"]]
     y = df_train["Category"].astype(str)
 
-    # Пайплайн
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
     text_pipeline = Pipeline([
-        ("tfidf", TfidfVectorizer(
-            analyzer="char_wb",
-            ngram_range=(3, 6),
-            max_features=2000
-        ))
+        ("tfidf", TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 6), max_features=2000))
     ])
 
     num_pipeline = Pipeline([
@@ -85,11 +76,28 @@ def train():
 
     model = Pipeline([
         ("pre", preprocessor),
-        ("clf", LogisticRegression(max_iter=1000, class_weight="balanced"))
+        ("clf", GradientBoostingClassifier())
     ])
 
     print("Обучение модели...")
-    model.fit(X, y)
+    model.fit(X_train, y_train)
+
+    print("\n=== Метрики качества ===")
+    y_pred = model.predict(X_test)
+
+    print("\nClassification Report:")
+    print(classification_report(y_test, y_pred))
+
+    print("Confusion Matrix:")
+    print(confusion_matrix(y_test, y_pred))
+
+    with open("metrics.txt", "w", encoding="utf-8") as f:
+        f.write("Classification Report:\n")
+        f.write(classification_report(y_test, y_pred))
+        f.write("\nConfusion Matrix:\n")
+        f.write(str(confusion_matrix(y_test, y_pred)))
+
+    print("✔ Метрики сохранены в metrics.txt")
 
     joblib.dump(model, MODEL_PATH)
     print(f"✔ Модель сохранена в {MODEL_PATH}")
