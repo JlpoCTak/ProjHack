@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Финансовый анализ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "chart.js": "https://esm.sh/chart.js@4.4.1/auto"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="app-root">
+    <div class="top-section">
+      <section class="table-section">
+        <div class="section-header">
+          <span>Операции</span>
+          <div class="header-controls">
+            <button id="upload-csv-btn" type="button" onclick="startCsvUpload()" title="Загрузить CSV" aria-label="Загрузить CSV">Загрузить CSV</button>
+            <button id="download-csv-btn" type="button" onclick="downloadOperationsCsv()" title="Скачать CSV операций" aria-label="Скачать CSV операций">Скачать CSV</button>
+          </div>
+          <div class="header-controls" style="margin-left:8px;">
+            <input id="category-search" type="search" placeholder="Поиск по категории" aria-label="Поиск по категории" />
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="ops-table">
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Категория</th>
+                <th>Списание</th>
+                <th>Пополнение</th>
+                <th>Баланс</th>
+              </tr>
+            </thead>
+            <tbody id="operations-body">
+              <!-- rows injected by JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="analytics-section">
+        <div class="section-header analytics-header">
+          <span>Аналитика баланса</span>
+          <div class="notif-wrap">
+            <button id="notif-bell" aria-label="Уведомления" title="Уведомления">🔔</button>
+            <div id="notif-list" class="notif-list" hidden></div>
+          </div>
+          <div style="margin-left:8px;">
+            <select id="analytics-category" aria-label="Фильтр по категории">
+              <option value="__all__">Все категории</option>
+            </select>
+          </div>
+          <div class="period-controls">
+            <input type="date" id="date-from" />
+            <span class="dash">–</span>
+            <input type="date" id="date-to" />
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="balance-chart"></canvas>
+        </div>
+
+        <div class="period-ops">
+          <div class="period-ops-header">
+            <span>Операции за период</span>
+            <span id="period-summary" class="period-summary"></span>
+          </div>
+          <ul id="period-ops-list" class="period-ops-list">
+            <!-- items injected by JS -->
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <section class="analysis-section">
+      <div class="section-header">
+        <span>Анализ бюджета и рекомендации</span>
+      </div>
+      <div id="analysis-content" class="analysis-content">
+        <!-- analysis text injected by JS -->
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
