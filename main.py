@@ -8,7 +8,7 @@ import pandas as pd
 from flask import Flask, request, jsonify, send_from_directory
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
-
+from ml import category_model   # <-- твой ml.py загружает model = joblib.load(...)
 
 # -----------------------
 # Data / ML preparation
@@ -114,6 +114,8 @@ class TransactionModel:
 # -----------------------
 
 app = Flask(__name__)
+app.config["DEBUG"] = True
+app.config["PROPAGATE_EXCEPTIONS"] = True
 transaction_model = TransactionModel()
 
 
@@ -202,6 +204,45 @@ def api_analyze():
 @app.route("/api/health", methods=["GET"])
 def api_health():
     return jsonify({"status": "ok"})
+
+@app.post("/api/predict_category_csv")
+def predict_category_csv():
+    try:
+        data = request.get_json()
+        if not data or "csv" not in data:
+            return jsonify({"error": "No CSV provided"}), 400
+
+        csv_text = data["csv"]
+
+        print("\n========== RAW CSV RECEIVED ==========")
+        print(csv_text[:500])
+        print("======================================\n")
+
+        # читаем CSV
+        from io import StringIO
+        df = pd.read_csv(StringIO(csv_text), dtype=str)
+
+        print("Parsed DF columns:", df.columns.tolist())
+        print(df.head())
+
+        # ПЕРЕД ПРЕДСКАЗАНИЕМ
+        from ml import category_model
+        df_pred = category_model.predict(df)
+
+        print("\n=== AFTER PREDICT ===")
+        print(df_pred.head())
+        print("=====================\n")
+
+        rows = df_pred.to_dict(orient="records")
+        return jsonify({"rows": rows})
+
+    except Exception as e:
+        print("\n\n🔥🔥🔥 SERVER ERROR IN /predict_category_csv 🔥🔥🔥")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 
 
 if __name__ == "__main__":
