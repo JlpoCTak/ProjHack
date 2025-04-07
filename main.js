@@ -1,4 +1,3 @@
-// main.js
 import Chart from "chart.js";
 
 let operations = [];
@@ -273,7 +272,6 @@ function computeNotifications(periodOps){
     });
   }
 
-  // cushion compare
   const s = computeSummary(periodOps);
   if (lastCushionLocal !== null && s.cushion < lastCushionLocal) {
     const drop = lastCushionLocal - s.cushion;
@@ -281,7 +279,6 @@ function computeNotifications(periodOps){
   }
   lastCushionLocal = s.cushion;
 
-  // anomalies
   const large = periodOps.filter(o => Math.abs(o.withdrawal||0) >= 10000 && (o.category||"").toString().trim() !== "Аренда");
   large.forEach(o => notes.push({ type:"critical", title:"Аномальная транзакция", text:`${o.date.split("-").reverse().join(".")}: списание ${Math.abs(o.withdrawal).toLocaleString("ru-RU")} ₽ в категории ${o.category}` }));
 
@@ -315,7 +312,6 @@ function renderNotifications(periodOps){
   document.querySelector(".notif-wrap")?.classList.add("has-unread");
 }
 
-// events
 function initEvents(){
   els.dateFrom.addEventListener("change", updateAnalytics);
   els.dateTo.addEventListener("change", updateAnalytics);
@@ -354,7 +350,6 @@ async function postJson(url, data) {
   return res.json();
 }
 
-// map server rows -> ui ops
 function mapAnalysisOpsToUiOps(rows) {
   if (!Array.isArray(rows)) return [];
   return rows.map((r, idx) => {
@@ -374,7 +369,7 @@ function mapAnalysisOpsToUiOps(rows) {
       amount: deposit - Math.abs(withdrawal||0),
       title: r.title || r.ref_no || r.ref || ""
     };
-  }).filter(u => u.date); // keep only with date (server should provide date)
+  }).filter(u => u.date);
 }
 
 function normalizeDateToIso(dateRaw) {
@@ -391,7 +386,6 @@ function normalizeDateToIso(dateRaw) {
   return s;
 }
 
-// Hidden file input
 let csvFileInput = null;
 function ensureCsvInput() {
   if (csvFileInput) return csvFileInput;
@@ -449,7 +443,6 @@ async function handleCsvSelected(event) {
       catch(e2) { text = new TextDecoder("utf-8").decode(buffer); }
     }
 
-    // send raw CSV to prediction endpoint — сервер вернёт строки с заполненной Category
     try {
       const result = await postJson("/api/predict_category_csv", { csv: text });
       if (result && Array.isArray(result.rows)) {
@@ -464,10 +457,8 @@ async function handleCsvSelected(event) {
       }
     } catch (err) {
       console.warn("predict_category_csv failed:", err);
-      // fallthrough -> try local parsing (best-effort)
     }
 
-    // Fallback: minimal client-side parse (if server failed)
     function parseCsv(text) {
       const lines = text.split(/\r?\n/).filter(l=>l.trim()!=="");
       if (!lines.length) return { headers: [], rows: [] };
@@ -480,7 +471,6 @@ async function handleCsvSelected(event) {
       return { headers: rawHeaders, rows };
     }
     const parsed = parseCsv(text);
-    // map parsed rows to operations (best-effort)
     operations = parsed.rows.map((r, idx) => {
       const withdrawal = Number((r["Withdrawal"]||r["withdrawal"]||"0").toString().replace(/[^0-9\-,.]/g,"").replace(",","."))||0;
       const deposit = Number((r["Deposit"]||r["deposit"]||"0").toString().replace(/[^0-9\-,.]/g,"").replace(",","."))||0;
@@ -515,7 +505,6 @@ async function loadInitialOperationsFromCsv() {
     try { csvText = new TextDecoder("utf-8", { fatal: true }).decode(ab); }
     catch(e) { try { csvText = new TextDecoder("windows-1251").decode(ab); } catch(e2) { csvText = new TextDecoder("utf-8").decode(ab); } }
 
-    // use prediction endpoint so categories are filled as on real upload
     try {
       const result = await postJson("/api/predict_category_csv", { csv: csvText });
       if (result && Array.isArray(result.rows)) {

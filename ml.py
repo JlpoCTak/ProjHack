@@ -16,7 +16,6 @@ class CategoryModel:
     def prepare(self, df):
         df = df.copy()
 
-        # Нормализация числовых полей
         for col in ["Withdrawal", "Deposit", "Balance"]:
             if col not in df.columns:
                 df[col] = 0
@@ -30,7 +29,6 @@ class CategoryModel:
 
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-        # Создаём Amount — модель тоже использует
         df["Amount"] = df["Deposit"] - df["Withdrawal"]
 
         # Создаём RefText — текстовая фича

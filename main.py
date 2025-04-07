@@ -10,9 +10,7 @@ from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 from ml import category_model   # <-- твой ml.py загружает model = joblib.load(...)
 
-# -----------------------
-# Data / ML preparation
-# -----------------------
+
 
 REQUIRED_COLUMNS = [
     "Date",
@@ -44,12 +42,12 @@ class TransactionModel:
         self.model: Optional[IsolationForest] = None
 
     def _prepare_frame(self, df: pd.DataFrame) -> pd.DataFrame:
-        # Ensure required columns exist
+
         missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
         if missing:
             raise ValueError(f"Missing columns in CSV: {', '.join(missing)}")
 
-        # Normalize numeric columns explicitly
+
         for col in ["Withdrawal", "Deposit", "Balance"]:
             df[col] = (
                 df[col]
@@ -126,23 +124,18 @@ def read_csv_from_text(csv_text: str) -> pd.DataFrame:
 
 
 def load_default_data() -> pd.DataFrame:
-    # Fallback to bundled CSV, used for initial model training
+
     df = pd.read_csv("ci_data.csv")
     return df
 
 
-# Initial training on bundled CSV
+
 try:
     base_df = load_default_data()
     transaction_model.fit(base_df)
-except Exception as exc:  # noqa: BLE001
-    # In a real app, use proper logging; here we just print
+except Exception as exc:
     print(f"Failed to train initial model: {exc}")
 
-
-# -----------------------
-# API endpoints
-# -----------------------
 
 @app.route("/")
 def root():
@@ -154,19 +147,7 @@ def files(path):
 
 @app.route("/api/analyze", methods=["POST"])
 def api_analyze():
-    """
-    Body (JSON):
-    {
-        "csv": "<raw csv text>",
-        "retrain": bool (optional, default false)
-    }
 
-    Returns:
-    {
-        "summary": {...},
-        "operations": [ ... OperationAnalysis ... ]
-    }
-    """
     payload = request.get_json(force=True, silent=True) or {}
     csv_text = payload.get("csv")
     retrain = bool(payload.get("retrain", False))
@@ -218,14 +199,12 @@ def predict_category_csv():
         print(csv_text[:500])
         print("======================================\n")
 
-        # читаем CSV
         from io import StringIO
         df = pd.read_csv(StringIO(csv_text), dtype=str)
 
         print("Parsed DF columns:", df.columns.tolist())
         print(df.head())
 
-        # ПЕРЕД ПРЕДСКАЗАНИЕМ
         from ml import category_model
         df_pred = category_model.predict(df)
 
@@ -246,5 +225,4 @@ def predict_category_csv():
 
 
 if __name__ == "__main__":
-    # Simple dev server
     app.run(host="0.0.0.0", port=8000, debug=True)
