@@ -1,7 +1,3 @@
-"""
-trainer_with_metrics.py
-Версия trainer.py с добавлением метрик + Gradient Boosting.
-"""
 
 import pandas as pd
 import numpy as np
